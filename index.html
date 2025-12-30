@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>臺灣遊蕩犬分析</title>
+    <!-- 引入 Leaflet CSS 與 Chart.js -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: "Microsoft JhengHei", sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }
+        header { text-align: center; padding: 40px 0; background: #2c3e50; color: white; border-radius: 8px; margin-bottom: 30px; }
+        .content-box { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        h2 { color: #2c3e50; border-left: 5px solid #e67e22; padding-left: 10px; }
+        #map { height: 500px; width: 100%; border-radius: 8px; z-index: 1; }
+        .analysis-text { background: #fff3e0; padding: 15px; border-radius: 5px; margin-top: 15px; font-weight: bold; }
+        footer { text-align: center; font-size: 0.9em; color: #7f8c8d; margin-top: 50px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>臺灣遊蕩犬分析</h1>
+    <p>作者：劉大華</p>
+</header>
+
+<section class="content-box">
+    <h2>前言</h2>
+    <p>
+        本網頁旨在透過數據視覺化，呈現台灣各縣市遊蕩犬的分布現況，進而喚起大眾對動物福利與環境管理平衡的關注。掌握精確的遊蕩犬數量，對於政府制定絕育政策及資源配置具有關鍵的社會價值。數據來源依據農業部動物保護資訊網公布之「113年各縣市遊蕩犬估計數調查結果」，並參考內政部 112 年 12 月之人口統計資料，確保分析的客觀性與科學性 [1], [2]。
+    </p>
+</section>
+
+<section class="content-box">
+    <h2>各縣市遊蕩犬估計數分布圖</h2>
+    <div id="map"></div>
+    <div class="analysis-text">
+        關鍵數字分析：113年全台遊蕩犬總數估計為 141,584 隻 [2]。其中，臺南市以 19,990 隻位居全國第一，其次為嘉義縣 16,944 隻 [1], [2]。數據顯示遊蕩犬高度集中於中南部地區，顯示這些地區在犬隻管控上需更多資源投入。
+    </div>
+</section>
+
+<section class="content-box">
+    <h2>各縣市每百人遊蕩犬數（高至低排序）</h2>
+    <canvas id="barChart"></canvas>
+    <div class="analysis-text">
+        關鍵數字分析：若考量人口密度，臺東縣以每百人 4.04 隻遊蕩犬奪冠，其次為嘉義縣的 3.50 隻 [2]。這反映出在人口較稀疏、地形開闊的農業或山區縣市，遊蕩犬的人均比例遠高於如臺北市（0.08）等都會區 [1], [2]。
+    </div>
+</section>
+
+<footer>
+    <p>數據來源：農業部動物保護資訊網、內政部社會經濟資料服務平台 [1], [2]</p>
+</footer>
+
+<!-- 引入 Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // 數據集 [1], [2]
+    const dogData = [
+        {name: "臺南市", count: 19990, per100: 1.07, lat: 23.00, lng: 120.20},
+        {name: "嘉義縣", count: 16944, per100: 3.50, lat: 23.45, lng: 120.30},
+        {name: "高雄市", count: 10200, per100: 0.37, lat: 22.62, lng: 120.31},
+        {name: "屏東縣", count: 10024, per100: 1.26, lat: 22.67, lng: 120.48},
+        {name: "新北市", count: 9982, per100: 0.25, lat: 25.01, lng: 121.46},
+        {name: "南投縣", count: 9644, per100: 2.02, lat: 23.91, lng: 120.68},
+        {name: "彰化縣", count: 9313, per100: 0.75, lat: 24.05, lng: 120.51},
+        {name: "臺東縣", count: 8551, per100: 4.04, lat: 22.75, lng: 121.15},
+        {name: "臺中市", count: 8542, per100: 0.30, lat: 24.14, lng: 120.67},
+        {name: "桃園市", count: 7893, per100: 0.34, lat: 24.99, lng: 121.30},
+        {name: "苗栗縣", count: 7403, per100: 1.38, lat: 24.56, lng: 120.81},
+        {name: "花蓮縣", count: 6983, per100: 2.20, lat: 23.97, lng: 121.60},
+        {name: "臺北市", count: 1908, per100: 0.08, lat: 25.03, lng: 121.56}
+    ];
+
+    // 初始化地圖
+    const map = L.map('map').setView([23.6, 120.9], 7);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    function getColor(d) {
+        return d > 15000 ? '#bd0026' : d > 10000 ? '#f03b20' : d > 5000 ? '#fd8d3c' : '#feb24c';
+    }
+
+    dogData.forEach(city => {
+        L.circleMarker([city.lat, city.lng], {
+            radius: Math.sqrt(city.count) / 10,
+            fillColor: getColor(city.count),
+            color: "#000", weight: 1, opacity: 1, fillOpacity: 0.8
+        }).addTo(map)
+        .bindPopup(`<b>${city.name}</b><br>遊蕩犬估計數：${city.count}<br>每百人犬數：${city.per100}`);
+    });
+
+    // 繪製橫條圖 (排序)
+    const sortedData = [...dogData].sort((a, b) => b.per100 - a.per100);
+    const ctx = document.getElementById('barChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: sortedData.map(d => d.name),
+            datasets: [{
+                label: '每百人遊蕩犬數',
+                data: sortedData.map(d => d.per100),
+                backgroundColor: sortedData.map(d => getColor(d.count)),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            plugins: { legend: { display: false } }
+        }
+    });
+</script>
+</body>
+</html>
